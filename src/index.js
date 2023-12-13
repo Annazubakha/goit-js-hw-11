@@ -4,6 +4,9 @@ import { FotosAPI } from './js/api';
 import { fotosTemplate } from './js/template';
 import { spinnerPlay, spinnerStop } from './js/spinner';
 
+let page = 1;
+let searchQuery = '';
+
 const refs = {
   form: document.querySelector('.form'),
   searchBtn: document.querySelector('.search-button'),
