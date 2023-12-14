@@ -5,7 +5,6 @@ export class FotosAPI {
     this.searchQuery = '';
     this.page = 1;
     this.per_page = 40;
-    // this.totalPages = 1;
   }
 
   async getPhotos() {

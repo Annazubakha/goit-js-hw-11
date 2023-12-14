@@ -78,3 +78,11 @@ img {
   left: 0;
   background-color: rgba(0, 0, 0, 0.8);
 }
+input {
+  width: 300px;
+}
+
+ul,
+li {
+  list-style: none;
+}

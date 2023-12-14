@@ -4,9 +4,6 @@ import { FotosAPI } from './js/api';
 import { fotosTemplate } from './js/template';
 import { spinnerPlay, spinnerStop } from './js/spinner';
 
-let page = 1;
-let searchQuery = '';
-
 const refs = {
   form: document.querySelector('.form'),
   searchBtn: document.querySelector('.search-button'),
@@ -14,84 +11,86 @@ const refs = {
   galleryList: document.querySelector('.gallery'),
   spiner: document.querySelector('.js-backdrop'),
 };
-
 const fotosAPI = new FotosAPI();
+
+const options = {
+  root: null,
+  rootMargin: '100px',
+  threshold: 1.0,
+};
+
+let callback = (entries, observer) => {
+  entries.forEach(async entry => {
+    if (entry.isIntersecting) {
+      observer.unobserve(entry.target);
+      fotosAPI.incrementPage();
+      spinnerPlay();
+
+      try {
+        const data = await fotosAPI.getPhotos();
+        const markup = fotosTemplate(data.hits);
+        refs.galleryList.insertAdjacentHTML('beforeend', markup);
+        lightbox.refresh();
+        hasMorePhotos(data.totalHits);
+      } catch (error) {
+        Notify.failure(error.message);
+      } finally {
+        spinnerStop();
+      }
+    }
+  });
+};
+
+let observer = new IntersectionObserver(callback, options);
 const onSearchFotos = async e => {
   e.preventDefault();
-  page = 1;
   const searchQuery = e.target.elements.searchQuery.value;
   fotosAPI.searchQuery = searchQuery;
 
-  if (fotosAPI.searchQuery === '') {
+  if (searchQuery === '') {
     clearFotos();
-
     Notify.failure('Please, enter your request');
     return;
   }
-  spinnerPlay();
-  try {
-    const data = await fotosAPI.getPhotos();
-    clearFotos();
-    const fotosArray = data.hits;
-    const totalHits = data.totalHits;
-    refs.galleryList.insertAdjacentHTML('beforeend', fotosTemplate(fotosArray));
-    lightbox.refresh();
 
-    if (fotosArray.length > 0) {
-      Notify.success(`Hooray! We found ${totalHits} images.`);
-    }
-    if (fotosAPI.getPage() < Math.ceil(totalHits / 40)) {
-      refs.loadMoreBtn.classList.remove('is-hidden');
-    }
-    if (fotosArray.length === 0) {
+  try {
+    spinnerPlay();
+    clearFotos();
+    const data = await fotosAPI.getPhotos();
+    const totalHits = data.totalHits;
+    const markup = fotosTemplate(data.hits);
+    refs.galleryList.insertAdjacentHTML('beforeend', markup);
+    lightbox.refresh();
+    if (data.hits.length === 0) {
       Notify.warning(
         `Sorry, there are no images matching your search query. Please try again.`
       );
     }
+    if (data.hits.length > 0) {
+      Notify.success(`Hooray! We found ${totalHits} images.`);
+    }
+    hasMorePhotos(data.totalHits);
   } catch (error) {
     Notify.failure(error.message);
-    refs.loadMoreBtn.classList.add('is-hidden');
   } finally {
     spinnerStop();
   }
 };
 
-refs.form.addEventListener('submit', onSearchFotos);
 function clearFotos() {
   fotosAPI.resetPage();
   refs.galleryList.innerHTML = '';
-  refs.loadMoreBtn.classList.add('is-hidden');
 }
+refs.form.addEventListener('submit', onSearchFotos);
 
-const onLoadMoreFotos = async e => {
-  fotosAPI.incrementPage();
-  spinnerPlay();
-  try {
-    const data = await fotosAPI.getPhotos();
-    const fotosArray = data.hits;
-    const markup = fotosTemplate(fotosArray);
-    refs.galleryList.insertAdjacentHTML('beforeend', markup);
-    const totalHits = data.totalHits;
-    if (fotosAPI.getPage() === Math.ceil(totalHits / 40)) {
-      refs.loadMoreBtn.classList.add('is-hidden');
-      Notify.warning(
-        'We are sorry, but you have reached the end of search results.'
-      );
-    }
-  } catch (error) {
-    Notify.failure(error.message);
-    refs.loadMoreBtn.classList.add('is-hidden');
-  } finally {
-    spinnerStop();
+function hasMorePhotos(totalHits) {
+  if (fotosAPI.getPage() < Math.ceil(totalHits / 40)) {
+    const item = document.querySelector('.gallery_item:last-child');
+    observer.observe(item);
   }
-};
-refs.loadMoreBtn.addEventListener('click', onLoadMoreFotos);
-
-// const { height: cardHeight } = document
-//   .querySelector('.gallery')
-//   .firstElementChild.getBoundingClientRect();
-
-// window.scrollBy({
-//   top: cardHeight * 2,
-//   behavior: 'smooth',
-// });
+  if (fotosAPI.getPage() === Math.ceil(totalHits / 40)) {
+    Notify.warning(
+      `We're sorry, but you've reached the end of search results.`
+    );
+  }
+}

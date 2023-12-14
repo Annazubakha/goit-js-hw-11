@@ -9,8 +9,9 @@ export function fotosTemplate(photos) {
         views,
         comments,
         downloads,
-      }) => `<a href='${largeImageURL}' class="big-photo">
-      <div class="photo-card">
+      }) => `
+      <li class="photo-card gallery_item">
+      <a href='${largeImageURL}' class="big-photo">
   <img class="photo" src="${webformatURL}" alt="${tags}" loading="lazy" />
   <div class="info">
     <p class="info-item">
@@ -30,7 +31,8 @@ ${views}
       ${downloads}
     </p>
   </div>
-</div>   </a>
+  </a>
+</li>   
 `
     )
     .join('');
